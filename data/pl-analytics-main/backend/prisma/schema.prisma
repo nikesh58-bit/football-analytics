@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id              String   @id @default(cuid())
+  optaId          Int      @unique
+  name            String
+  shortName       String
+  crestUrl        String?
+  founded         Int?
+  stadium         String?
+  stadiumCapacity Int?
+  city            String?
+  country         String   @default("England")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  homeMatches     Match[]      @relation("HomeMatches")
+  awayMatches     Match[]      @relation("AwayMatches")
+  events          MatchEvent[]
+  seasonStats     TeamSeasonStats[]
+  playerSeasonStats PlayerSeasonStats[]
+  standings       Standing[]
+  players         Player[]
+
+  @@index([name])
+  @@index([country])
+}
+
+model Player {
+  id              String   @id @default(cuid())
+  optaId          Int      @unique
+  firstName       String
+  lastName        String
+  displayName     String
+  dateOfBirth     DateTime?
+  nationality     String?
+  height          Int?
+  weight          Int?
+  preferredFoot   PreferredFoot?
+  position        String?
+  photoUrl        String?
+  currentTeamId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  currentTeam     Team?        @relation(fields: [currentTeamId], references: [id])
+  events          MatchEvent[] @relation("EventPlayer")
+  relatedEvents   MatchEvent[] @relation("EventRelatedPlayer")
+  seasonStats     PlayerSeasonStats[]
+
+  @@index([displayName])
+  @@index([currentTeamId])
+  @@index([nationality])
+}
+
+enum PreferredFoot {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+model Competition {
+  id          String   @id @default(cuid())
+  optaId      Int      @unique
+  name        String
+  shortName   String
+  country     String
+  logoUrl     String?
+  type        CompetitionType @default(LEAGUE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  seasons     Season[]
+  playerStats PlayerSeasonStats[]
+  teamStats   TeamSeasonStats[]
+
+  @@index([country])
+  @@index([type])
+}
+
+enum CompetitionType {
+  LEAGUE
+  CUP
+  INTERNATIONAL
+}
+
+model Season {
+  id            String   @id @default(cuid())
+  competitionId String
+  name          String
+  startDate     DateTime
+  endDate       DateTime
+  isCurrent     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  competition   Competition @relation(fields: [competitionId], references: [id])
+  matches       Match[]
+  playerStats   PlayerSeasonStats[]
+  teamStats     TeamSeasonStats[]
+  standings     Standing[]
+
+  @@unique([competitionId, name])
+  @@index([isCurrent])
+}
+
+model Match {
+  id            String       @id @default(cuid())
+  optaId        Int          @unique
+  seasonId      String
+  homeTeamId    String
+  awayTeamId    String
+  homeScore     Int?
+  awayScore     Int?
+  status        MatchStatus  @default(SCHEDULED)
+  matchday      Int?
+  kickoffTime   DateTime
+  venue         String?
+  referee       String?
+  attendance    Int?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  season        Season       @relation(fields: [seasonId], references: [id])
+  homeTeam      Team         @relation("HomeMatches", fields: [homeTeamId], references: [id])
+  awayTeam      Team         @relation("AwayMatches", fields: [awayTeamId], references: [id])
+  events        MatchEvent[]
+
+  @@index([seasonId])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+  @@index([kickoffTime])
+  @@index([status])
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  HT
+  FT
+  AET
+  PEN
+  POSTPONED
+  CANCELLED
+}
+
+model MatchEvent {
+  id              String      @id @default(cuid())
+  matchId         String
+  playerId        String?
+  teamId          String
+  type            EventType
+  minute          Int
+  second          Int         @default(0)
+  x               Float?
+  y               Float?
+  endX            Float?
+  endY            Float?
+  xG              Float?
+  bodyPart        BodyPart?
+  situation       Situation?
+  outcome         Outcome?
+  relatedPlayerId String?
+  createdAt       DateTime    @default(now())
+
+  match           Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player          Player?     @relation("EventPlayer", fields: [playerId], references: [id])
+  team            Team        @relation(fields: [teamId], references: [id])
+  relatedPlayer   Player?     @relation("EventRelatedPlayer", fields: [relatedPlayerId], references: [id])
+
+  @@index([matchId])
+  @@index([playerId])
+  @@index([teamId])
+  @@index([type])
+  @@index([minute])
+}
+
+enum EventType {
+  GOAL
+  ASSIST
+  YELLOW_CARD
+  RED_CARD
+  SUBSTITUTION_IN
+  SUBSTITUTION_OUT
+  SHOT
+  SHOT_ON_TARGET
+  SHOT_OFF_TARGET
+  BLOCKED_SHOT
+  PENALTY
+  PENALTY_MISSED
+  OWN_GOAL
+  FOUL
+  OFFSIDE
+  CORNER
+  FREE_KICK
+  THROW_IN
+  SAVE
+  CLAIM
+  PUNCH
+  INTERCEPTION
+  TACKLE
+  CLEARANCE
+  DRIBBLE
+  PASS
+  KEY_PASS
+  CROSS
+  LONG_BALL
+  THROUGH_BALL
+}
+
+enum BodyPart {
+  FOOT
+  HEAD
+  OTHER
+}
+
+enum Situation {
+  OPEN_PLAY
+  SET_PIECE
+  PENALTY
+  COUNTER_ATTACK
+  FREE_KICK
+  CORNER
+  THROW_IN
+}
+
+enum Outcome {
+  SUCCESS
+  FAIL
+}
+
+model PlayerSeasonStats {
+  id              String  @id @default(cuid())
+  playerId        String
+  teamId          String
+  seasonId        String
+  competitionId   String
+  appearances     Int     @default(0)
+  minutesPlayed   Int     @default(0)
+  goals           Int     @default(0)
+  assists         Int     @default(0)
+  xG              Float   @default(0)
+  xA              Float   @default(0)
+  shots           Int     @default(0)
+  shotsOnTarget   Int     @default(0)
+  passes          Int     @default(0)
+  passAccuracy    Float   @default(0)
+  keyPasses       Int     @default(0)
+  crosses         Int     @default(0)
+  crossesAccuracy Float   @default(0)
+  dribbles        Int     @default(0)
+  dribblesWon     Int     @default(0)
+  tackles         Int     @default(0)
+  tacklesWon      Int     @default(0)
+  interceptions   Int     @default(0)
+  clearances      Int     @default(0)
+  blocks          Int     @default(0)
+  fouls           Int     @default(0)
+  foulsDrawn      Int     @default(0)
+  offsides        Int     @default(0)
+  yellowCards     Int     @default(0)
+  redCards        Int     @default(0)
+  penaltiesScored Int     @default(0)
+  penaltiesMissed Int     @default(0)
+  penaltiesWon    Int     @default(0)
+  penaltiesConceded Int   @default(0)
+  ownGoals        Int     @default(0)
+  cleanSheets     Int     @default(0)
+  saves           Int     @default(0)
+  goalsConceded   Int     @default(0)
+  punches         Int     @default(0)
+  claims          Int     @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  player          Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team            Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season          Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  competition     Competition @relation(fields: [competitionId], references: [id])
+
+  @@unique([playerId, seasonId, competitionId])
+  @@index([teamId])
+  @@index([seasonId])
+  @@index([competitionId])
+}
+
+model TeamSeasonStats {
+  id                String  @id @default(cuid())
+  teamId            String
+  seasonId          String
+  competitionId     String
+  played            Int     @default(0)
+  won               Int     @default(0)
+  drawn             Int     @default(0)
+  lost              Int     @default(0)
+  goalsFor          Int     @default(0)
+  goalsAgainst      Int     @default(0)
+  goalDifference    Int     @default(0)
+  points            Int     @default(0)
+  xGFor             Float   @default(0)
+  xGAgainst         Float   @default(0)
+  cleanSheets       Int     @default(0)
+  failedToScore     Int     @default(0)
+  homePlayed        Int     @default(0)
+  homeWon           Int     @default(0)
+  homeDrawn         Int     @default(0)
+  homeLost          Int     @default(0)
+  homeGoalsFor      Int     @default(0)
+  homeGoalsAgainst  Int     @default(0)
+  awayPlayed        Int     @default(0)
+  awayWon           Int     @default(0)
+  awayDrawn         Int     @default(0)
+  awayLost          Int     @default(0)
+  awayGoalsFor      Int     @default(0)
+  awayGoalsAgainst  Int     @default(0)
+  form              String  @default("")
+  position          Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  team              Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season            Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  competition       Competition @relation(fields: [competitionId], references: [id])
+
+  @@unique([teamId, seasonId, competitionId])
+  @@index([seasonId])
+  @@index([competitionId])
+  @@index([position])
+}
+
+model Standing {
+  id            String  @id @default(cuid())
+  seasonId      String
+  teamId        String
+  position      Int
+  played        Int
+  won           Int
+  drawn         Int
+  lost          Int
+  goalsFor      Int
+  goalsAgainst  Int
+  goalDifference Int
+  points        Int
+  form          String
+  updatedAt     DateTime @updatedAt
+
+  season        Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team          Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, teamId])
+  @@unique([seasonId, position])
+  @@index([position])
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  keyHash   String   @unique
+  tier      ApiTier  @default(FREE)
+  rateLimit Int      @default(100)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastUsedAt DateTime?
+
+  @@index([keyHash])
+}
+
+enum ApiTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model Subscription {
+  id            String            @id @default(cuid())
+  userId        String
+  stripeCustomerId String
+  stripeSubscriptionId String? @unique
+  stripePriceId String?
+  status        SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}

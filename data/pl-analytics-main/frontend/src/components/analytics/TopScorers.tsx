@@ -1,0 +1,17 @@
+'use client';
+
+import { useTopScorers, useTeams } from '@/hooks/useApi';
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { Trophy, Target } from 'lucide-react';
+import Link from 'next/link';
+
+export function TopScorers() {
+  const [seasonId, setSeasonId] = useState('current-season-id');
+  const { data: scorers } = useTopScorers(seasonId, undefined, 10);
+  const { data: teams } = useTeams({ limit: '50' });
+
+  if (!scorers) return null;
+
+  return ( <section aria-label="Top Scorers"> <div className="flex items-center justify-between mb-4"> <h2 className="text-xl font-semibold text-slate-900">Top Scorers</h2> <Link href="/analytics/top-scorers" className="text-sm text-primary-600 hover:underline font-medium">View all →</Link> </div> <div className="bg-white rounded-xl border border-slate-200 overflow-hidden"> <div className="grid grid-cols-12 gap-4 p-3 bg-slate-50 border-b border-slate-200 font-medium text-xs text-slate-600 uppercase tracking-wider"> <div className="col-span-1">#</div> <div className="col-span-4">Player</div> <div className="col-span-2">Club</div> <div className="col-span-1 text-center"><Trophy className="w-4 h-4 mx-auto" aria-hidden="true" /></div> <div className="col-span-1 text-center"><Target className="w-4 h-4 mx-auto" aria-hidden="true" /></div> <div className="col-span-1 text-center">Apps</div> <div className="col-span-1 text-center">Min</div> <div className="col-span-1 text-center">xG</div> <div className="col-span-1 text-center">p90</div> </div> <div className="divide-y divide-slate-100"> {scorers?.slice(0, 10).map((scorer: any, index: number) => ( <Link key={scorer.id} href={`/players/${scorer.player?.id}`} className="grid grid-cols-12 gap-4 p-3 hover:bg-slate-50 transition-colors"> <div className="col-span-1 flex items-center justify-center font-bold text-slate-600">{index + 1}</div> <div className="col-span-4 flex items-center gap-3"> {scorer.player?.photoUrl && ( <img src={scorer.player.photoUrl} alt="" className="w-8 h-8 rounded-full" /> )} <div> <p className="font-medium text-slate-900">{scorer.player?.displayName}</p> <p className="text-xs text-slate-500">{scorer.player?.nationality}</p> </div> </div> <div className="col-span-2 flex items-center gap-2"> {scorer.team?.crestUrl && <img src={scorer.team.crestUrl} alt="" className="w-6 h-6" />} <span className="text-sm text-slate-600">{scorer.team?.shortName}</span> </div> <div className="col-span-1 flex items-center justify-center font-bold text-slate-900 text-lg">{scorer.goals}</div> <div className="col-span-1 flex items-center justify-center text-sm text-slate-600">{scorer.assists}</div> <div className="col-span-1 flex items-center justify-center text-sm text-slate-600">{scorer.appearances}</div> <div className="col-span-1 flex items-center justify-center text-sm text-slate-600">{scorer.minutesPlayed}</div> <div className="col-span-1 flex items-center justify-center text-sm text-slate-600">{scorer.xG?.toFixed(2)}</div> <div className="col-span-1 flex items-center justify-center text-sm font-medium text-primary-600"> {scorer.minutesPlayed > 0 ? ((scorer.goals / scorer.minutesPlayed) * 90).toFixed(2) : '0.00'} </div> </Link> ))} </div> </div> </section> );
+}
