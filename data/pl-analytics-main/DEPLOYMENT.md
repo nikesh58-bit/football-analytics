@@ -1,6 +1,66 @@
 # PL Analytics Pro - Production Deployment Guide
 
-## Quick Start (Docker)
+## Recommended setup: Render (backend + infra) + Vercel (frontend)
+
+The repo root contains `render.yaml` — a Render Blueprint that provisions **everything**
+(PostgreSQL, Redis, Meilisearch, backend API). The frontend can run either on Render
+(included in the blueprint) or on Vercel (recommended for Next.js).
+
+### Option A — Everything on Render (Blueprint, ~10 minutes)
+
+1. Push this repo to GitHub (done).
+2. Go to https://dashboard.render.com → **New +** → **Blueprint**.
+3. Select the `football-analytics` repository. Render auto-detects `render.yaml` at the repo root.
+4. Review the 5 services it will create:
+   - `pl-postgres` (free Postgres — expires after 30 days, upgrade for real use)
+   - `pl-redis` (free Key Value)
+   - `pl-meilisearch` (Docker image, starter plan because it needs a disk)
+   - `pl-backend` (Docker, runs `prisma db push` + seed on every deploy)
+   - `pl-frontend` (Docker, optional if you use Vercel instead)
+5. Click **Apply**. When prompted, fill in the `sync: false` vars (Stripe keys — or leave blank).
+6. First deploy takes ~5–10 min. Backend health check: `https://pl-backend-xxxx.onrender.com/health`.
+
+> The blueprint deploys the frontend on Render too. If you'd rather use Vercel for the
+> frontend, delete the `pl-frontend` service in the Render dashboard after the first deploy.
+
+### Option B — Backend on Render, frontend on Vercel
+
+**Render:** same as Option A (keep or delete the `pl-frontend` service).
+
+**Vercel:**
+
+1. https://vercel.com → **Add New** → **Project** → import `football-analytics`.
+2. Configure:
+   - **Framework Preset:** Next.js (auto-detected)
+   - **Root Directory:** `data/pl-analytics-main/frontend`
+   - **Build Command:** leave default — the `vercel-build` script in `frontend/package.json`
+     installs the whole workspace and builds `shared` before `next build`
+   - **Install Command:** `echo "skipped (vercel-build handles install)"`
+3. Environment Variables (Production + Preview):
+   - `NEXT_PUBLIC_API_URL` = `https://pl-backend-xxxx.onrender.com` (your Render backend URL, no trailing slash)
+4. Deploy.
+
+> `NEXT_PUBLIC_API_URL` is baked into the client bundle at **build** time. If you later
+> change the backend URL, redeploy the frontend.
+
+### Post-deploy checklist
+
+- [ ] Open `https://<backend>/health` → `{"status":"ok"}`
+- [ ] Open the frontend URL — pages will show empty states until data is ingested
+- [ ] (Stripe) add webhook endpoint `https://<backend>/api/billing/webhook` and set `STRIPE_WEBHOOK_SECRET`
+- [ ] (Custom domain) add in Vercel/Render and update `FRONTEND_URL` on the backend + `NEXT_PUBLIC_API_URL` on the frontend, then redeploy
+
+### Free-tier caveats
+
+| Service | Free tier behaviour |
+|---|---|
+| Render web services | Spin down after 15 min idle → first request takes ~50 s |
+| Render Postgres (free) | Expires after 30 days |
+| Render Key Value (free) | 25 MB, fine for caching |
+| Meilisearch | Needs a paid instance (disk); data is lost without one |
+| Vercel (Hobby) | Free for non-commercial; serverless functions have 10 s timeout |
+
+## Quick Start (Docker, local)
 
 ```bash
 # 1. Clone and configure

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "vercel-build": "cd ../.. && npm ci && npm run build --workspace=shared && npm run build --workspace=frontend"
   },
   "dependencies": {
     "@pl-analytics/shared": "^1.0.0",
