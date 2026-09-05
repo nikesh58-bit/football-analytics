@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import { connectRedis, redis } from './lib/redis';
 import { setupIndexes } from './lib/meilisearch';
 import { prisma } from './lib/prisma';
+import { initSentry, captureError } from './lib/sentry';
 
 import teamsRouter from './routes/teams';
 import playersRouter from './routes/players';
@@ -17,9 +18,14 @@ import eventsRouter from './routes/events';
 import analyticsRouter from './routes/analytics';
 import searchRouter from './routes/search';
 import billingRouter from './routes/billing';
+import jobsRouter from './routes/jobs';
+import v1Router from './routes/v1';
+import docsRouter from './routes/docs';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+initSentry();
 
 app.set('trust proxy', 1);
 
@@ -38,19 +44,27 @@ app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, message: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later' }, standardHeaders: true, legacyHeaders: false });
 app.use(globalLimiter);
 
-app.get('/health', (req, res) => { res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() }); });
+app.get('/health', (req, res) => { res.json({ status: 'ok', version: 'v1', timestamp: new Date().toISOString(), uptime: process.uptime() }); });
 
-app.use('/api/teams', teamsRouter);
+// Versioned API (canonical)
+app.use('/api/v1', (req, res, next) => { res.setHeader('API-Version', 'v1'); next(); }, v1Router);
+
+// Legacy unversioned API — deprecated, kept for compatibility.
+app.use('/api/teams', (req, res, next) => { res.setHeader('Deprecation', 'true'); res.setHeader('API-Version', 'v1-legacy'); next(); }, teamsRouter);
 app.use('/api/players', playersRouter);
 app.use('/api/matches', matchesRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/billing', billingRouter);
+app.use('/api/jobs', jobsRouter);
+
+// OpenAPI + docs (no auth)
+app.use('/api', docsRouter);
 
 app.use((req, res) => { res.status(404).json({ code: 'NOT_FOUND', message: `Route ${req.method} ${req.path} not found` }); });
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => { console.error('Unhandled error:', err); res.status(500).json({ code: 'INTERNAL_ERROR', message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message }); });
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => { console.error('Unhandled error:', err); captureError(err); res.status(500).json({ code: 'INTERNAL_ERROR', message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message }); });
 
 let server: ReturnType<typeof app.listen> | null = null;
 
