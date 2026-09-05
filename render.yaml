@@ -3,16 +3,14 @@
 # This file must stay at the repository ROOT for Render to detect it.
 services:
   # ── Search ────────────────────────────────────────────────
+  # FREE tier: no disk (index is rebuilt/lost on redeploy). Backend degrades
+  # gracefully without search. Add a disk + starter plan only when paying.
   - type: web
     name: pl-meilisearch
     runtime: image
     image:
       url: docker.io/getmeili/meilisearch:v1.8
-    plan: starter          # free plan does not support disks; search index would be lost on redeploy
-    disk:
-      name: meili-data
-      mountPath: /meili_data
-      sizeGB: 1
+    plan: free
     envVars:
       - key: MEILI_MASTER_KEY
         generateValue: true
@@ -27,7 +25,7 @@ services:
     runtime: docker
     rootDir: data/pl-analytics-main
     dockerfilePath: infra/docker/Dockerfile.backend
-    plan: starter
+    plan: free
     healthCheckPath: /health
     preDeployCommand: "cd backend && npx prisma db push --skip-generate && npx prisma db seed"
     envVars:
@@ -77,7 +75,7 @@ services:
     runtime: docker
     rootDir: data/pl-analytics-main
     dockerfilePath: infra/docker/Dockerfile.frontend
-    plan: starter
+    plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
         fromService:
