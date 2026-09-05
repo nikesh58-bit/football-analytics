@@ -27,7 +27,8 @@ services:
     dockerfilePath: infra/docker/Dockerfile.backend
     plan: free
     healthCheckPath: /health
-    preDeployCommand: "cd backend && npx prisma db push --skip-generate && npx prisma db seed"
+    # NOTE: free-tier services have no preDeployCommand — schema+seed runs in
+    # the container start command (infra/docker/Dockerfile.backend CMD).
     envVars:
       - key: DATABASE_URL
         fromDatabase:

@@ -57,5 +57,7 @@ EXPOSE 3001
 
 ENV PORT=3001
 
-# Run migrations before serving is done by the deploy pipeline (db:migrate:prod).
-CMD ["node", "backend/dist/index.js"]
+# Free-tier Render has no preDeployCommand, so schema+seed runs at container
+# start. Seed is idempotent (upserts). After real migrations exist, switch to
+# migrate deploy.
+CMD ["sh", "-c", "cd backend && npx prisma db push --skip-generate && npx prisma db seed && node dist/index.js"]
