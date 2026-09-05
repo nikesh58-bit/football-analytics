@@ -20,7 +20,9 @@ services:
       PORT: 3001
     ports:
       - "3001:3001"
-    command: ["sh", "-c", "cd backend && npx prisma migrate deploy && node dist/index.js"]
+    # No prisma/migrations/ yet: use db push. After `npm run db:migrate -- --name init`
+    # locally, switch to: ["sh", "-c", "cd backend && npx prisma migrate deploy && node dist/index.js"]
+    command: ["sh", "-c", "cd backend && npx prisma db push --skip-generate && node dist/index.js"]
     restart: unless-stopped
 
   frontend:

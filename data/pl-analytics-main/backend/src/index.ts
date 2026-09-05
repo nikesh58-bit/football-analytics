@@ -29,8 +29,15 @@ initSentry();
 
 app.set('trust proxy', 1);
 
+function normalizeOrigin(url: string): string {
+  const out = (url || '').trim().replace(/\/+$/, '');
+  if (!out) return 'http://localhost:3000';
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(out)) return out;
+  return `https://${out}`; // Render `host` property is a bare hostname
+}
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: normalizeOrigin(process.env.FRONTEND_URL || 'http://localhost:3000'), credentials: true }));
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 

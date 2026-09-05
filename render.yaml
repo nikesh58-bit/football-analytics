@@ -56,12 +56,22 @@ services:
         sync: false        # set in the Render dashboard (or leave empty — billing routes only)
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: STRIPE_PRICE_PRO_MONTHLY
+        sync: false
+      - key: STRIPE_PRICE_PRO_YEARLY
+        sync: false
+      - key: STRIPE_PRICE_ENTERPRISE
+        sync: false
       - key: NODE_ENV
         value: production
       - key: PORT
         value: "3001"
 
   # ── Frontend (Next.js standalone) ────────────────────────
+  # NOTE: NEXT_PUBLIC_* is baked at Docker BUILD time. Render passes envVars
+  # at runtime only, so after the backend URL is known, set NEXT_PUBLIC_API_URL
+  # to the full https backend URL in the dashboard and Manual Deploy pl-frontend.
+  # (Vercel instead: set Root Directory data/pl-analytics-main/frontend.)
   - type: web
     name: pl-frontend
     runtime: docker
@@ -73,7 +83,7 @@ services:
         fromService:
           name: pl-backend
           type: web
-          property: host
+          property: host # bare hostname — client + rewrites prepend https:// if missing
       - key: NODE_ENV
         value: production
 

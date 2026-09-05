@@ -9,7 +9,7 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "vercel-build": "cd ../.. && npm ci && npm run build --workspace=shared && npm run build --workspace=frontend"
+    "vercel-build": "cd .. && npm ci && npm run build --workspace=shared && npm run build --workspace=frontend"
   },
   "engines": { "node": ">=20.0.0" },
   "dependencies": {
