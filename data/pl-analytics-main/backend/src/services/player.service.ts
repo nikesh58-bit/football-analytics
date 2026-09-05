@@ -119,7 +119,7 @@ export class PlayerService {
 
     if (isPer90) {
       const field = metric.replace('_p90', '');
-      const rows = await prisma.playerSeasonStats.findMany({ where, include: { player: true, team: true }, take: 5000 });
+      const rows = await prisma.playerSeasonStats.findMany({ where, include: { player: true, team: true }, take: 2000 });
       const stats = rows
         .map(r => ({ ...r, per90: r.minutesPlayed > 0 ? ((r as any)[field === 'xg' ? 'xG' : field === 'xa' ? 'xA' : field] / r.minutesPlayed) * 90 : 0 }))
         .sort((a, b) => b.per90 - a.per90)

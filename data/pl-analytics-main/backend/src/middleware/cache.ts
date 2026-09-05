@@ -39,11 +39,16 @@ export function rateLimitMiddleware(maxRequests: number, windowMs: number) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const key = cacheKey('ratelimit', ip, req.path);
-    
-    const current = await redis.incr(key);
-    
-    if (current === 1) {
-      await redis.pexpire(key, windowMs);
+
+    // Fail-open: Redis outage must not 500 every request.
+    let current = 0;
+    try {
+      current = await redis.incr(key);
+      if (current === 1) {
+        await redis.pexpire(key, windowMs);
+      }
+    } catch {
+      return next();
     }
 
     res.setHeader('X-RateLimit-Limit', maxRequests);
@@ -54,6 +59,42 @@ export function rateLimitMiddleware(maxRequests: number, windowMs: number) {
       return res.status(429).json({
         code: 'RATE_LIMITED',
         message: 'Too many requests. Please slow down.',
+        retryAfter: Math.ceil(windowMs / 1000),
+      });
+    }
+
+    next();
+  };
+}
+
+/**
+ * Per-API-key rate limit. Must run AFTER apiKeyAuth/optionalApiKey so
+ * req.apiKey is populated when a key is present. Anonymous callers fall
+ * back to the FREE tier quota. Fail-open on Redis errors.
+ */
+export function tierRateLimit(windowMs: number = 24 * 60 * 60 * 1000) {
+  return async (req: any, res: Response, next: NextFunction) => {
+    const quota = req.apiKey?.rateLimit ?? 100;
+    const identity = req.apiKey ? `key:${req.apiKey.id}` : `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`;
+    const key = cacheKey('tier-ratelimit', identity, req.path);
+
+    let current = 0;
+    try {
+      current = await redis.incr(key);
+      if (current === 1) {
+        await redis.pexpire(key, windowMs);
+      }
+    } catch {
+      return next();
+    }
+
+    res.setHeader('X-RateLimit-Limit', quota);
+    res.setHeader('X-RateLimit-Remaining', Math.max(0, quota - current));
+
+    if (current > quota) {
+      return res.status(429).json({
+        code: 'RATE_LIMITED',
+        message: 'Daily API quota exceeded for your tier.',
         retryAfter: Math.ceil(windowMs / 1000),
       });
     }

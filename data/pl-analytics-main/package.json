@@ -24,8 +24,10 @@
     "lint": "npm run lint --workspace=frontend",
     "type-check": "npm run type-check --workspace=frontend",
     "test": "npm run test --workspace=backend",
-    "docker:up": "docker-compose -f infra/docker/docker-compose.yml up -d",
-    "docker:down": "docker-compose -f infra/docker/docker-compose.yml down"
+    "ingest:pl": "npm run ingest:pl --workspace=backend",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:up:prod": "docker compose -f infra/docker/docker-compose.prod.yml up -d"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

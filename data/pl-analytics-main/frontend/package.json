@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "vercel-build": "cd ../.. && npm ci && npm run build --workspace=shared && npm run build --workspace=frontend"
   },
+  "engines": { "node": ">=20.0.0" },
   "dependencies": {
     "@pl-analytics/shared": "^1.0.0",
     "next": "^14.0.4",

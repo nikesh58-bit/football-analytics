@@ -29,7 +29,7 @@ services:
     dockerfilePath: infra/docker/Dockerfile.backend
     plan: starter
     healthCheckPath: /health
-    preDeployCommand: "cd backend && npx prisma db push --skip-generate && npx prisma db seed || true"
+    preDeployCommand: "cd backend && npx prisma db push --skip-generate && npx prisma db seed"
     envVars:
       - key: DATABASE_URL
         fromDatabase:

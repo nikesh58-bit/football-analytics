@@ -47,6 +47,10 @@ prisma/migrations/.migration_lock.toml
 # Meilisearch
 meili_data/
 
+# Demo dataset is intentionally tracked for local dev/seed reference.
+# Do not add data/*.csv here, or the demo file will silently disappear.
+!data/*.csv
+
 # Misc
 *.pem
 .vercel

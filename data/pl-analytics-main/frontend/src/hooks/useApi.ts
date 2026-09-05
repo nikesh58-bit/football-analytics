@@ -24,3 +24,7 @@ export function useTopScorers(seasonId: string, competitionId?: string, limit: n
 export function useTopAssists(seasonId: string, competitionId?: string, limit: number = 20) { const key = seasonId ? `/api/analytics/top-assists/${seasonId}?${new URLSearchParams({ competitionId: competitionId || '', limit: limit.toString() }).toString()}` : null; return useSWR<any>(key, swrFetcher, { revalidateOnFocus: false }); }
 export function usePlayerRadar(playerId: string, seasonId: string, competitionId?: string) { const key = playerId && seasonId ? `/api/analytics/radar/${playerId}?seasonId=${seasonId}${competitionId ? `&competitionId=${competitionId}` : ''}` : null; return useSWR<any>(key, swrFetcher, { revalidateOnFocus: false }); }
 export function useSearch(query: string, limit: number = 5) { const key = query && query.length >= 2 ? `/api/search?q=${encodeURIComponent(query)}&limit=${limit}` : null; return useSWR<any>(key, swrFetcher, { revalidateOnFocus: false, dedupingInterval: 5000 }); }
+
+export function setApiKey(key: string) { api.setApiKey(key); }
+
+export function clearApiKey() { api.clearApiKey(); }

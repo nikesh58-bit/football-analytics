@@ -11,9 +11,10 @@ function esc(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-function intParam(value: unknown, fallback: number): number {
+function intParam(value: unknown, fallback: number, min = 1, max = 50): number {
   const n = parseInt(value as string, 10);
-  return Number.isFinite(n) ? n : fallback;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 }
 
 router.get('/', cacheMiddleware(300, 'search'), async (req: AuthenticatedRequest, res) => {

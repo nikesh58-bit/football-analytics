@@ -32,8 +32,8 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // so this must be mounted before express.json parses it.
 app.use('/api/billing/webhook', express.raw({ type: 'application/json' }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, message: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later' }, standardHeaders: true, legacyHeaders: false });
 app.use(globalLimiter);
@@ -78,7 +78,7 @@ async function shutdown(signal: string) {
   console.log(`${signal} received, shutting down gracefully`);
   if (server) server.close(async () => {
     try { await prisma.$disconnect(); } catch {}
-    try { redis.disconnect(); } catch {}
+    try { await redis.quit().catch(() => {}); } catch {}
     process.exit(0);
   });
   // Force-exit if connections don't drain in time

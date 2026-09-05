@@ -1,0 +1,40 @@
+version: '3.8'
+
+# Production: app containers only. PostgreSQL/Redis/Meilisearch are managed
+# services (Render/RDS/Upstash/Meilisearch Cloud). Provide URLs via environment.
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend
+    image: pl-analytics-backend:latest
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      MEILISEARCH_HOST: ${MEILISEARCH_HOST:?MEILISEARCH_HOST is required}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:?MEILISEARCH_API_KEY is required}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    command: ["sh", "-c", "cd backend && npx prisma migrate deploy && node dist/index.js"]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+    image: pl-analytics-frontend:latest
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
