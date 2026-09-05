@@ -19,6 +19,7 @@
     "ingest:pl": "tsx src/jobs/ingestion.ts 8"
   },
   "engines": { "node": ">=20.0.0" },
+  "prisma": { "seed": "tsx prisma/seed.ts" },
   "dependencies": {
     "@pl-analytics/shared": "^1.0.0",
     "@prisma/client": "^5.7.0",
